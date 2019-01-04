@@ -1,26 +1,38 @@
 import React, { Component } from 'react';
+import { Meteor } from 'meteor/meteor';
 import { withTracker } from 'meteor/react-meteor-data';
 import TaskList from './TaskList';
-import { Tasks } from '../api/tasks';
 import TaskForm from './TaskForm';
+import AccountsUIWrapper from './AccountsUIWrapper';
+import { Tasks } from '../api/tasks';
+
 
 class App extends Component {
   static defaultTask = { text: '' }
-  
+
   state = {
     task: { ...App.defaultTask },
   };
 
   componentDidMount() {
-    document.getElementById('text').focus();
+    const textInput = document.getElementById('text');
+    if (textInput) {
+      textInput.focus();
+    }
   }
 
   onCreateTask = event => {
     event.preventDefault();
     const { text } = this.state.task;
 
-    Tasks.insert({ text, createdAt: new Date() });
-    this.setState({task: App.defaultTask})
+    Tasks.insert({
+      text,
+      owner: Meteor.userId(),
+      username: Meteor.user().username,
+      createdAt: new Date()
+    });
+
+    this.setState({ task: App.defaultTask })
   };
 
   onFormFieldChange = event => {
@@ -33,14 +45,17 @@ class App extends Component {
 
   render() {
     const { task } = this.state;
-    const { tasks } = this.props;
+    const { tasks, currentUser } = this.props;
 
     return (
       <div className="container">
         <header>
           <h1>Todo List</h1>
         </header>
-        <TaskForm onSubmit={this.onCreateTask} onChange={this.onFormFieldChange} task={task} />
+        <AccountsUIWrapper />
+        {currentUser &&
+          <TaskForm onSubmit={this.onCreateTask} onChange={this.onFormFieldChange} task={task} />
+        }
         <TaskList tasks={tasks} />
       </div>
     );
@@ -48,5 +63,6 @@ class App extends Component {
 }
 
 export default withTracker(() => ({
-  tasks: Tasks.find({}, {sort: { createdAt: -1 }}).fetch(),
+  tasks: Tasks.find({}, { sort: { createdAt: -1 } }).fetch(),
+  currentUser: Meteor.user(),
 }))(App);
